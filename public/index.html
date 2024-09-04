@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>File Indexer</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome for Icons -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1 class="text-center my-4"><i class="fas fa-folder-open"></i> Indexed Files</h1>
+
+    <!-- Device Info -->
+    <div id="device-info" class="alert alert-info text-center">
+      <strong>Device:</strong> <span id="device-name"></span><br>
+      <strong>OS:</strong> <span id="device-os"></span><br>
+      <strong>Storage:</strong> <span id="device-storage"></span><br>
+    </div>
+
+    <div class="btn-group category-buttons" role="group" aria-label="File Categories">
+      <button type="button" class="btn btn-secondary" data-category="all" onclick="showAll()">Show All</button>
+      <button type="button" class="btn btn-primary" data-category="images" onclick="showCategory('images')">Show Images</button>
+      <button type="button" class="btn btn-primary" data-category="documents" onclick="showCategory('documents')">Show Documents</button>
+      <button type="button" class="btn btn-primary" data-category="videos" onclick="showCategory('videos')">Show Videos</button>
+      <button type="button" class="btn btn-primary" data-category="messages" onclick="showCategory('messages')">Show Messages</button>
+    </div>    
+   
+
+    <div id="loading">
+      <div class="spinner-border text-primary" role="status">
+        <span class="sr-only">Loading...</span>
+      </div>
+      <div>Please wait, loading files...</div>
+    </div>
+
+    <div id="fetch-status" class="alert alert-info" role="alert">
+      Fetching files... <span id="fetch-progress">0%</span>
+    </div>
+
+    <div id="fileList">
+      <!-- Daftar file akan muncul di sini -->
+    </div>
+  </div>
+
+  <div class="pagination-controls">
+    <button id="previousPage" class="btn btn-secondary" disabled>Previous</button>
+    <span id="currentPage">Page 1</span>
+    <button id="nextPage" class="btn btn-secondary">Next</button>
+  </div>
+
+  <!-- Modal for Preview -->
+  <div class="modal fade" id="previewModal" tabindex="-1" aria-labelledby="previewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="previewModalLabel">File Preview</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div id="previewContent" class="text-center">
+            <!-- Preview content will be inserted here -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS and dependencies -->
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+  <!-- Custom JS -->
+  <script src="js/main.js"></script>
+</body>
+</html>
