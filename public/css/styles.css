@@ -158,6 +158,64 @@ body {
   color: white;
 }
 
+/* Style for call logs */
+#callLogs {
+  margin-top: 20px;
+}
+
+#callLogs .list-group-item {
+  border: 1px solid #e0e0e0;
+  border-radius: 5px;
+  padding: 10px;
+  margin-bottom: 10px;
+  background-color: #ffffff;
+}
+
+#callLogs .list-group-item p {
+  margin: 0;
+}
+
+#messages {
+  margin-top: 20px;
+}
+
+#messages .list-group-item {
+  border: 1px solid #e0e0e0;
+  border-radius: 5px;
+  padding: 10px;
+  margin-bottom: 10px;
+  background-color: #ffffff;
+}
+
+#messages .list-group-item p {
+  margin: 0;
+}
+
+.modal-body {
+  display: flex;
+  flex-direction: row;
+}
+
+.preview-media {
+  max-width: 60%;
+  max-height: 500px;
+}
+
+.file-details-sidebar {
+  max-width: 40%;
+  border-left: 1px solid #ccc;
+  padding-left: 15px;
+}
+
+.file-details-scroll {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.file-preview {
+  max-width: 100%;
+  max-height: 500px;
+}
 
 
 
