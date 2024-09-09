@@ -1,26 +1,36 @@
 let allFiles = {
-    images: [],
-    documents: [],
-    videos: [],
-    messages: [],
-    others: []
-  };
+  images: [],
+  documents: [],
+  videos: [],
+  messages: [],
+  others: []
+};
 
-  let currentPage = 1;
+let currentPage = 1;
 const limit = 10;
 
-function fetchFiles() {
-  showLoading(true);
-  // Fetch file dengan parameter pagination (page dan limit)
-  fetch(`/files?page=${currentPage}&limit=${limit}`)
-    .then(response => response.json())
-    .then(data => {
-      allFiles = data.data; // Update dengan file yang difetch
-      showAll(); // Tampilkan file
-      updatePagination(data.pagination); // Update UI pagination
-    })
-    .catch(error => console.error('Fetch error:', error))
-    .finally(() => showLoading(false));
+let totalProgress = 0;
+let totalSteps = 3; // Files, Call logs, and Messages
+
+function updateProgress(increment, stepName) {
+  totalProgress += increment;
+  const progressPercentage = Math.round((totalProgress / totalSteps) * 100);
+  const progressElement = document.getElementById('fetch-progress');
+  const progressBar = document.querySelector('.progress-bar');
+  
+  // Update text progress
+  progressElement.textContent = `${stepName} (${progressPercentage}%)`;
+  
+  // Update lebar progress bar
+  progressBar.style.width = `${progressPercentage}%`;
+
+  console.log(`Progress: ${progressPercentage}% - ${stepName}`);
+
+  if (progressPercentage >= 100) {
+    console.log('All data fetched.');
+    progressElement.textContent = 'All data loaded (100%)';
+    showLoading(false);
+  }
 }
 
 function updatePagination(pagination) {
@@ -31,75 +41,245 @@ function updatePagination(pagination) {
   document.getElementById('previousPage').disabled = pagination.currentPage <= 1;
 }
 
-document.getElementById('nextPage').addEventListener('click', () => {
-  currentPage++;
-  fetchFiles();
-});
+// Fungsi untuk menampilkan loading
+function showLoading(show) {
+  const loadingElement = document.getElementById('loading');
+  loadingElement.style.display = show ? 'block' : 'none';
+}
 
-document.getElementById('previousPage').addEventListener('click', () => {
-  currentPage--;
-  fetchFiles();
-});
+// Fungsi untuk menampilkan progres fetching
+function fetchProgress() {
+  fetch('/files/progress')
+    .then(response => response.json())
+    .then(data => {
+      const progressElement = document.getElementById('fetch-progress');
+      progressElement.textContent = `${data.progress}%`;
 
-  
-  function showLoading(show) {
-    const loadingElement = document.getElementById('loading');
-    loadingElement.style.display = show ? 'block' : 'none';
-  }
-  
-  async function fetchDeviceInfo() {
-    showLoading(true);
-    try {
-      const response = await fetch('/device-info');
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
+      if (data.progress < 100) {
+        setTimeout(fetchProgress, 500); // Polling setiap 500ms
+      } else {
+        console.log('File fetching completed');
       }
-      const deviceInfo = await response.json();
-      document.getElementById('device-name').textContent = deviceInfo.name;
-      document.getElementById('device-os').textContent = deviceInfo.os;
-      document.getElementById('device-storage').textContent = `Total: ${deviceInfo.storage.total}, Used: ${deviceInfo.storage.used}, Available: ${deviceInfo.storage.available}`;
-    } catch (error) {
-      console.error('Fetch error:', error);
-    } finally {
-      showLoading(false);
-    }
-  }
-  
-  function fetchFiles() {
+    })
+    .catch(error => console.error('Error fetching progress:', error));
+}
+
+function fetchFileProgress() {
+  return new Promise((resolve, reject) => {
+    fetch('/files/progress')
+      .then(response => response.json())
+      .then(data => {
+        updateProgress(1); // Menghitung files sebagai satu langkah
+        resolve();
+      })
+      .catch(error => {
+        console.error('Error fetching file progress:', error);
+        reject();
+      });
+  });
+}
+
+// Fungsi untuk mengambil file dari backend
+function fetchFiles() {
+  return new Promise((resolve, reject) => {
     showLoading(true);
-  
-    // Mulai polling untuk progres
-    fetchProgress();
-  
     fetch('/files')
       .then(response => response.json())
       .then(data => {
-        allFiles = data; // Simpan seluruh data ke front-end
-        showCategory('images'); // Tampilkan kategori default
+        console.log('Files fetched successfully.');
+        allFiles = data;
+        showAll(); // Menampilkan semua file
+        updateProgress(1, 'Loading images, documents, and videos'); // Setelah files selesai, update progress
+        resolve();
       })
-      .catch(error => console.error('Fetch error:', error))
-      .finally(() => showLoading(false));
+      .catch(error => {
+        console.error('Error fetching files:', error);
+        reject();
+      });
+  });
+}
+
+function setActiveCategory(button) {
+  // Hapus kelas aktif dari semua tombol
+  document.querySelectorAll('.category-buttons button').forEach(btn => {
+    btn.classList.remove('active');
+  });
+
+  // Tambahkan kelas aktif ke tombol yang dipilih
+  button.classList.add('active');
+}
+
+function fetchCallLogs() {
+  return new Promise((resolve, reject) => {
+    fetch('/logs/fetch', { method: 'POST' })
+      .then(response => response.json())
+      .then(data => {
+        const logs = data.logs;
+        const callLogsContainer = document.getElementById('callLogs');
+        callLogsContainer.innerHTML = '';
+
+        logs.forEach(log => {
+          const logElement = document.createElement('div');
+          logElement.classList.add('list-group-item');
+          logElement.innerHTML = `
+            <p><strong>Number:</strong> ${log.number || 'N/A'}</p>
+            <p><strong>Duration:</strong> ${log.duration || 'N/A'} seconds</p>
+            <p><strong>Date:</strong> ${new Date(parseInt(log.date)).toLocaleString()}</p>
+            <p><strong>Location:</strong> ${log.geocoded_location || 'N/A'}</p>
+            <p><strong>Type:</strong> ${getCallType(log.type)}</p>
+          `;
+          callLogsContainer.appendChild(logElement);
+        });
+
+        console.log('Call logs fetched.');
+        updateProgress(1, 'Loading call logs'); // Update progress setelah call logs selesai
+        resolve();
+      })
+      .catch(error => {
+        console.error('Error fetching call logs:', error);
+        reject();
+      });
+  });
+}
+// Helper function to determine the type of the call
+function getCallType(type) {
+  switch (parseInt(type)) {
+    case 1:
+      return 'Incoming Call';
+    case 2:
+      return 'Outgoing Call';
+    case 3:
+      return 'Missed Call';
+    default:
+      return 'Unknown Type';
   }
-  
-  
-  function setActiveCategory(button) {
-    // Hapus kelas aktif dari semua tombol
-    document.querySelectorAll('.category-buttons button').forEach(btn => {
-      btn.classList.remove('active');
+}
+
+
+async function fetchDeviceInfo() {
+  showLoading(true);
+  try {
+    const response = await fetch('/device-info');
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+    const deviceInfo = await response.json();
+    document.getElementById('device-name').textContent = deviceInfo.name;
+    document.getElementById('device-os').textContent = deviceInfo.os;
+    document.getElementById('device-storage').textContent = `Total: ${deviceInfo.storage.total}, Used: ${deviceInfo.storage.used}, Available: ${deviceInfo.storage.available}`;
+  } catch (error) {
+    console.error('Fetch error:', error);
+  } finally {
+    showLoading(false);
+  }
+}
+
+// Fungsi untuk mengubah tipe panggilan menjadi deskripsi
+function getCallType(type) {
+  switch (parseInt(type)) {
+    case 1:
+      return 'Incoming';
+    case 2:
+      return 'Outgoing';
+    case 3:
+      return 'Missed';
+    default:
+      return 'Unknown';
+  }
+}
+
+// Menggabungkan semua fungsi fetching dengan progress bar
+function fetchAllData() {
+  showLoading(true);
+  totalProgress = 0;
+
+  Promise.all([fetchFiles(), fetchMessages(), fetchCallLogs()])
+    .then(() => {
+      console.log('All data fetched successfully.');
+      updateProgress(0, 'All data loaded');
+    })
+    .catch(error => {
+      console.error('Error fetching all data:', error);
+      showLoading(false);
     });
-  
-    // Tambahkan kelas aktif ke tombol yang dipilih
-    button.classList.add('active');
+}
+
+// Panggil fetchAllData saat halaman dimuat
+window.onload = function () {
+  fetchAllData();
+};
+
+
+// Fungsi untuk mengambil pesan dari backend
+function fetchMessages() {
+  return new Promise((resolve, reject) => {
+    fetch('/logs/messages', { method: 'POST' })
+      .then(response => response.json())
+      .then(data => {
+        const messages = data.messages;
+        const messagesContainer = document.getElementById('messages');
+        messagesContainer.innerHTML = ''; // Clear previous messages
+
+        messages.forEach(msg => {
+          const messageElement = document.createElement('div');
+          messageElement.classList.add('list-group-item');
+          messageElement.innerHTML = `
+            <p><strong>From:</strong> ${msg.address || 'N/A'}</p>
+            <p><strong>Date:</strong> ${new Date(parseInt(msg.date)).toLocaleString()}</p>
+            <p><strong>Message:</strong> ${msg.body || 'N/A'}</p>
+          `;
+          messagesContainer.appendChild(messageElement);
+        });
+
+        updateProgress(1); // Setelah messages selesai, increment progress
+        resolve();
+      })
+      .catch(error => {
+        console.error('Error fetching messages:', error);
+        reject();
+      });
+  });
+}
+
+
+// Fungsi untuk memulai fetching log panggilan dan pesan
+async function fetchLogs() {
+  try {
+    const response = await fetch('/logs/fetch', { method: 'POST' });
+    if (!response.ok) {
+      throw new Error('Failed to fetch logs');
+    }
+    const data = await response.json();  // Pastikan responnya JSON
+    console.log('Logs:', data);
+  } catch (error) {
+    console.error('Error fetching logs:', error);
   }
-  
-  function showCategory(category) {
-    // Panggil fungsi ini ketika kategori dipilih
-    setActiveCategory(document.querySelector(`[data-category="${category}"]`));
-  
+}
+
+
+
+function showCategory(category) {
+  const fileList = document.getElementById('fileList');
+  const callLogsContainer = document.getElementById('callLogs');
+  const messagesContainer = document.getElementById('messages'); // Tambahkan messages container
+
+  // Hide all sections initially
+  fileList.style.display = 'none';
+  callLogsContainer.style.display = 'none';
+  messagesContainer.style.display = 'none';
+
+  if (category === 'logs') {
+    fetchCallLogs();
+    callLogsContainer.style.display = 'block'; // Show call logs
+  } else if (category === 'messages') {
+    fetchMessages();
+    messagesContainer.style.display = 'block'; // Show messages
+  } else {
+    fileList.style.display = 'block'; // Show file list if other category is selected
+    
     const files = allFiles[category] || [];
-    const fileList = document.getElementById('fileList');
-    fileList.innerHTML = ''; // Clear existing items
-  
+    fileList.innerHTML = ''; // Clear the file list content
+
     if (files.length === 0) {
       const div = document.createElement('div');
       div.className = 'text-center';
@@ -107,8 +287,7 @@ document.getElementById('previousPage').addEventListener('click', () => {
       fileList.appendChild(div);
       return;
     }
-  
-    // Tampilkan file sesuai kategori
+
     files.forEach(file => {
       const div = document.createElement('div');
       div.className = 'file-list-item';
@@ -123,117 +302,208 @@ document.getElementById('previousPage').addEventListener('click', () => {
       fileList.appendChild(div);
     });
   }
-  
-  
-  
-  function getFileIcon(filePath) {
-    if (filePath.match(/\.(jpg|jpeg|png|gif)$/i)) {
-      return 'fas fa-file-image'; // Ikon gambar
-    } else if (filePath.match(/\.(mp4|mkv|avi)$/i)) {
-      return 'fas fa-file-video'; // Ikon video
-    } else if (filePath.match(/\.(pdf|docx|txt)$/i)) {
-      return 'fas fa-file-alt'; // Ikon dokumen
-    }
-    return 'fas fa-file'; // Ikon default
-  }
-  
-  function getPreviewButton(filePath) {
-    if (filePath.match(/\.(jpg|jpeg|png|gif|mp4|mkv|avi|pdf|docx|txt)$/i)) {
-      return `<button class="btn btn-primary btn-sm" onclick="previewFile('${filePath}')">Preview</button>`;
-    }
-    return ''; // Tidak ada tombol preview untuk tipe file yang tidak didukung
-  }
-  
-  
-  function getPreviewButton(filePath) {
-    // Tampilkan tombol preview hanya untuk gambar, video, dan dokumen
-    if (filePath.match(/\.(jpg|jpeg|png|gif|mp4|mkv|avi|pdf|docx|txt)$/i)) {
-      return `<button class="btn btn-primary btn-sm" onclick="previewFile('${filePath}')">Preview</button>`;
-    }
-    return ''; // Jangan tampilkan tombol preview untuk folder atau file lainnya
-  }
-  
-  function showAll() {
-    const fileList = document.getElementById('fileList');
-    fileList.innerHTML = ''; // Clear existing items
-    let hasFiles = false;
-  
-    Object.keys(allFiles).forEach(category => {
-      const files = allFiles[category];
-      
-      if (files.length > 0) {
-        hasFiles = true;
-        files.forEach(file => {
-          const div = document.createElement('div');
-          div.className = 'file-list-item';
-          div.innerHTML = `
-            <i class="${getFileIcon(file.path)} file-icon"></i>
-            <div class="file-details">
-              <div class="file-path">${file.path.replace(/^\/sdcard\//, '')}</div>
-              <div class="file-info">Last Modified: ${file.timestamp}</div>
-            </div>
-            ${getPreviewButton(file.path)}
-          `;
-          fileList.appendChild(div);
-        });
-      }
-    });
-  
-    if (!hasFiles) {
-      const div = document.createElement('div');
-      div.className = 'text-center';
-      div.textContent = 'No files found.';
-      fileList.appendChild(div);
-    }
-  }
-  
-  
-  
-  function previewFile(filePath) {
-    const previewContent = document.getElementById('previewContent');
-    previewContent.innerHTML = ''; // Clear previous content
-  
-    const encodedPath = encodeURIComponent(filePath);
-  
-    if (filePath.match(/\.(jpg|jpeg|png|gif)$/i)) {
-      // Preview image
-      previewContent.innerHTML = `<img src="/files/file?path=${encodedPath}" class="file-preview" alt="Image Preview">`;
-    } else if (filePath.match(/\.(mp4|mkv|avi)$/i)) {
-      // Preview video
-      previewContent.innerHTML = `
-        <video controls class="file-preview">
-          <source src="/files/file?path=${encodedPath}" type="video/mp4">
-          Your browser does not support the video tag.
-        </video>
-      `;
-    } else if (filePath.match(/\.(pdf|docx|txt)$/i)) {
-      // Preview document
-      previewContent.innerHTML = `<iframe src="/files/file?path=${encodedPath}" class="file-preview" frameborder="0"></iframe>`;
-    } else {
-      previewContent.innerHTML = '<p>No preview available for this file type.</p>';
-    }
-  
-    // Show the modal
-    $('#previewModal').modal('show');
-  }
+}
 
-  function fetchProgress() {
-    fetch('/files/progress')
+
+function fetchMessages() {
+  return new Promise((resolve, reject) => {
+    fetch('/logs/messages', { method: 'POST' })
       .then(response => response.json())
       .then(data => {
-        // Update progress bar di HTML
-        document.getElementById('fetch-progress').textContent = `${data.progress}%`;
-  
-        if (data.progress < 100) {
-          setTimeout(fetchProgress, 500); // Poll lagi setelah 500ms
-        }
+        const messages = data.messages;
+        console.log('Messages:', messages);
+        const messagesContainer = document.getElementById('messages');
+        messagesContainer.innerHTML = ''; // Clear previous messages
+
+        messages.forEach(msg => {
+          const messageElement = document.createElement('div');
+          messageElement.classList.add('list-group-item');
+          messageElement.innerHTML = `
+            <p><strong>From:</strong> ${msg.address || 'N/A'}</p>
+            <p><strong>Date:</strong> ${new Date(parseInt(msg.date)).toLocaleString()}</p>
+            <p><strong>Message:</strong> ${msg.body || 'N/A'}</p>
+          `;
+          messagesContainer.appendChild(messageElement);
+        });
+
+        console.log('Messages fetched.');
+        updateProgress(1, 'Loading messages'); // Setelah messages selesai, update progress
+        resolve();
       })
-      .catch(error => console.error('Progress fetch error:', error));
+      .catch(error => {
+        console.error('Error fetching messages:', error);
+        reject();
+      });
+  });
+}
+
+// Fungsi untuk mengambil dan menampilkan log panggilan
+async function fetchCallLogs() {
+  try {
+    const response = await fetch('/logs/fetch', { method: 'POST' });
+    if (!response.ok) {
+      throw new Error('Failed to fetch logs');
+    }
+
+    const data = await response.json();
+    const logs = data.logs;
+
+    const callLogsContainer = document.getElementById('callLogs');
+    callLogsContainer.innerHTML = ''; // Clear previous logs
+
+    if (logs.length === 0) {
+      callLogsContainer.innerHTML = '<p>No call logs found.</p>';
+      return;
+    }
+
+    // Loop through each log and append to the container
+    logs.forEach(log => {
+      const logElement = document.createElement('div');
+      logElement.classList.add('list-group-item');
+      logElement.innerHTML = `
+        <p><strong>Name:</strong> ${log.name || 'Contact is not saved'}</p>
+        <p><strong>Number:</strong> ${log.normalized_number || 'N/A'}</p>
+        <p><strong>Duration:</strong> ${log.duration || 'N/A'} seconds</p>
+        <p><strong>Date:</strong> ${new Date(parseInt(log.date)).toLocaleString()}</p>
+        <p><strong>Location:</strong> ${log.geocoded_location || 'N/A'}</p>
+        <p><strong>Type:</strong> ${getCallType(log.type)}</p>
+      `;
+      callLogsContainer.appendChild(logElement);
+    });
+  } catch (error) {
+    console.error('Error fetching call logs:', error);
   }
-  
-  // Fetch device info and files on page load
-  window.onload = function() {
-    fetchDeviceInfo();
-    fetchFiles();
-  };
-  
+}
+
+
+// Fungsi untuk mengubah tipe panggilan menjadi deskripsi
+function getCallType(type) {
+  switch (parseInt(type)) {
+    case 1:
+      return 'Panggilan Masuk';
+    case 2:
+      return 'Panggilan Keluar';
+    case 3:
+      return 'Panggilan Tidak Terjawab';
+    default:
+      return 'Tipe tidak diketahui';
+  }
+}
+
+
+// Fungsi untuk mendapatkan ikon berdasarkan jenis file
+function getFileIcon(filePath) {
+  if (filePath.match(/\.(jpg|jpeg|png|gif)$/i)) {
+    return 'fas fa-file-image'; // Ikon gambar
+  } else if (filePath.match(/\.(mp4|mkv|avi)$/i)) {
+    return 'fas fa-file-video'; // Ikon video
+  } else if (filePath.match(/\.(pdf|docx|txt)$/i)) {
+    return 'fas fa-file-alt'; // Ikon dokumen
+  }
+  return 'fas fa-file'; // Ikon default
+}
+
+function showAll() {
+  const fileList = document.getElementById('fileList');
+  fileList.innerHTML = ''; // Clear existing items
+  let hasFiles = false;
+
+  Object.keys(allFiles).forEach(category => {
+    const files = allFiles[category];
+    if (files && files.length > 0) {
+      hasFiles = true;
+      files.forEach(file => {
+        const div = document.createElement('div');
+        div.className = 'file-list-item';
+        div.innerHTML = `
+          <i class="${getFileIcon(file.path)} file-icon"></i>
+          <div class="file-details">
+            <div class="file-path">${file.path.replace(/^\/sdcard\//, '')}</div>
+            <div class="file-info">Last Modified: ${file.dateModified}</div>
+          </div>
+          ${getPreviewButton(file.path)}
+        `;
+        fileList.appendChild(div);
+      });
+    }
+  });
+
+  if (!hasFiles) {
+    const div = document.createElement('div');
+    div.className = 'text-center';
+    div.textContent = 'No files found.';
+    fileList.appendChild(div);
+  }
+}
+
+// Fungsi untuk mendapatkan tombol preview berdasarkan jenis file
+function getPreviewButton(filePath) {
+  if (filePath.match(/\.(jpg|jpeg|png|gif|mp4|mkv|avi|pdf|docx|txt)$/i)) {
+    return `<button class="btn btn-primary btn-sm" onclick="previewFile('${filePath}')">Preview</button>`;
+  }
+  return ''; // Tidak ada tombol preview untuk tipe file yang tidak didukung
+}
+function previewFile(filePath) {
+  const previewContent = document.getElementById('previewContent');
+  const fileDetails = document.getElementById('fileDetails');
+  previewContent.innerHTML = ''; // Kosongkan konten sebelumnya
+  fileDetails.innerHTML = ''; // Kosongkan detail sebelumnya
+
+  const encodedPath = encodeURIComponent(filePath);
+
+  // Ambil file detail dari backend berdasarkan path
+  fetch(`/files/file-info?path=${encodedPath}`)
+    .then(response => response.json())
+    .then(data => {
+      let detailsHTML = `
+        <p><strong>File Path:</strong> ${data.path}</p>
+        <p><strong>Date Added:</strong> ${data.dateAdded || 'N/A'}</p>
+        <p><strong>Date Modified:</strong> ${data.dateModified || 'N/A'}</p>
+      `;
+
+      // Jika geolocation ada, tambahkan link ke Google Maps
+      if (data.geolocation && data.geolocation.latitude !== 'N/A' && data.geolocation.longitude !== 'N/A') {
+        const googleMapsLink = `https://www.google.com/maps?q=${data.geolocation.latitude},${data.geolocation.longitude}`;
+        detailsHTML += `
+          <p><strong>Geolocation:</strong> 
+            <a href="${googleMapsLink}" target="_blank">View on Google Maps</a>
+          </p>
+        `;
+      }
+
+      fileDetails.innerHTML = detailsHTML;
+
+      // Tambahkan konten ke modal berdasarkan tipe file
+      if (filePath.match(/\.(jpg|jpeg|png|gif)$/i)) {
+        previewContent.innerHTML = `
+          <img src="/files/file?path=${encodedPath}" class="file-preview" alt="Image Preview">
+        `;
+      } else if (filePath.match(/\.(mp4|mkv|avi)$/i)) {
+        previewContent.innerHTML = `
+          <video controls class="file-preview">
+            <source src="/files/file?path=${encodedPath}" type="video/mp4">
+            Your browser does not support the video tag.
+          </video>
+        `;
+      } else {
+        previewContent.innerHTML = `
+          <p>No preview available for this file type.</p>
+        `;
+      }
+
+      // Tampilkan modal
+      $('#previewModal').modal('show');
+    })
+    .catch(error => {
+      console.error('Error fetching file details:', error);
+    });
+}
+
+
+
+// Fetch files and logs on page load
+window.onload = function () {
+  fetchDeviceInfo();
+  fetchFiles();
+  fetchLogs();  // Panggil log fetching saat halaman dimuat
+};
