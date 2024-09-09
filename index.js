@@ -5,6 +5,7 @@ const port = 3000;
 // Import routes
 const deviceInfoRoute = require('./routes/deviceInfo');
 const initializeFilesRoute = require('./routes/files');
+const logsRoute = require('./routes/logs');  // Tambahkan ini
 const clearTempFolder = require('./routes/clearTemp');
 
 // Bersihkan folder temp saat server dimulai
@@ -15,6 +16,8 @@ app.use(express.static('public'));
 
 // Gunakan rute yang diimport
 app.use('/device-info', deviceInfoRoute);
+app.use('/logs', logsRoute);  // Tambahkan ini
+
 async function startServer() {
   try {
     const filesRoute = await initializeFilesRoute();
