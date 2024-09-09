@@ -224,7 +224,8 @@ function fetchMessages() {
           const messageElement = document.createElement('div');
           messageElement.classList.add('list-group-item');
           messageElement.innerHTML = `
-            <p><strong>From:</strong> ${msg.address || 'N/A'}</p>
+            <p><strong>From:</strong> ${msg.from || 'N/A'}</p>
+            <p><strong>To:</strong> ${msg.to || 'N/A'}</p>
             <p><strong>Date:</strong> ${new Date(parseInt(msg.date)).toLocaleString()}</p>
             <p><strong>Message:</strong> ${msg.body || 'N/A'}</p>
           `;
@@ -241,7 +242,6 @@ function fetchMessages() {
   });
 }
 
-
 // Fungsi untuk memulai fetching log panggilan dan pesan
 async function fetchLogs() {
   try {
@@ -256,17 +256,44 @@ async function fetchLogs() {
   }
 }
 
+function showContacts() {
+  fetch('/contacts')
+    .then(response => response.json())
+    .then(data => {
+      const contactsContainer = document.getElementById('contacts');
+      contactsContainer.innerHTML = ''; // Clear previous contacts
 
+      if (data.contacts.length === 0) {
+        contactsContainer.innerHTML = '<p>No contacts found.</p>';
+      } else {
+        data.contacts.forEach(contact => {
+          const contactElement = document.createElement('div');
+          contactElement.classList.add('list-group-item');
+          contactElement.innerHTML = `
+            <p><strong>Name:</strong> ${contact.name}</p>
+            <p><strong>Phone:</strong> ${contact.phone}</p>
+          `;
+          contactsContainer.appendChild(contactElement);
+        });
+      }
+
+      // Tampilkan container contacts
+      contactsContainer.style.display = 'block';
+    })
+    .catch(error => console.error('Error fetching contacts:', error));
+}
 
 function showCategory(category) {
   const fileList = document.getElementById('fileList');
   const callLogsContainer = document.getElementById('callLogs');
-  const messagesContainer = document.getElementById('messages'); // Tambahkan messages container
+  const messagesContainer = document.getElementById('messages');
+  const contactsContainer = document.getElementById('contacts'); // Tambahkan contacts container
 
   // Hide all sections initially
   fileList.style.display = 'none';
   callLogsContainer.style.display = 'none';
   messagesContainer.style.display = 'none';
+  contactsContainer.style.display = 'none'; // Hide contacts by default
 
   if (category === 'logs') {
     fetchCallLogs();
@@ -274,6 +301,9 @@ function showCategory(category) {
   } else if (category === 'messages') {
     fetchMessages();
     messagesContainer.style.display = 'block'; // Show messages
+  } else if (category === 'contacts') {
+    showContacts(); // Panggil fungsi showContacts untuk menampilkan kontak
+    contactsContainer.style.display = 'block'; // Show contacts
   } else {
     fileList.style.display = 'block'; // Show file list if other category is selected
     
@@ -304,14 +334,12 @@ function showCategory(category) {
   }
 }
 
-
 function fetchMessages() {
   return new Promise((resolve, reject) => {
     fetch('/logs/messages', { method: 'POST' })
       .then(response => response.json())
       .then(data => {
         const messages = data.messages;
-        console.log('Messages:', messages);
         const messagesContainer = document.getElementById('messages');
         messagesContainer.innerHTML = ''; // Clear previous messages
 
@@ -319,15 +347,15 @@ function fetchMessages() {
           const messageElement = document.createElement('div');
           messageElement.classList.add('list-group-item');
           messageElement.innerHTML = `
-            <p><strong>From:</strong> ${msg.address || 'N/A'}</p>
+            <p><strong>From:</strong> ${msg.from || 'N/A'}</p>
+            <p><strong>To:</strong> ${msg.to || 'N/A'}</p>
             <p><strong>Date:</strong> ${new Date(parseInt(msg.date)).toLocaleString()}</p>
             <p><strong>Message:</strong> ${msg.body || 'N/A'}</p>
           `;
           messagesContainer.appendChild(messageElement);
         });
 
-        console.log('Messages fetched.');
-        updateProgress(1, 'Loading messages'); // Setelah messages selesai, update progress
+        updateProgress(1); // Setelah messages selesai, increment progress
         resolve();
       })
       .catch(error => {
@@ -336,6 +364,7 @@ function fetchMessages() {
       });
   });
 }
+
 
 // Fungsi untuk mengambil dan menampilkan log panggilan
 async function fetchCallLogs() {
