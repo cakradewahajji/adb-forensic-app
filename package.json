@@ -1,8 +1,10 @@
 {
   "dependencies": {
+    "exif-parser": "^0.1.12",
     "express": "^4.19.2",
+    "ffprobe": "^1.1.2",
     "node": "^22.8.0",
     "p-limit": "^6.1.0",
-    "type": "module"
+    "sqlite3": "^5.1.7"
   }
 }
