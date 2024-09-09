@@ -54,7 +54,7 @@ router.post('/messages', (req, res) => {
     });
   });
   
-  // Fungsi untuk parsing pesan SMS
+  // Fungsi untuk parsing pesan SMS dan membedakan *from* dan *to*
   function parseMessages(stdout) {
     const messages = [];
     const rows = stdout.split('\n').filter(row => row.trim()); // Pisahkan baris berdasarkan newline
@@ -70,6 +70,17 @@ router.post('/messages', (req, res) => {
         }
       });
   
+      // Tentukan apakah pesan adalah *from* (pesan masuk) atau *to* (pesan keluar)
+      if (message['type'] === '1') {
+        // Pesan masuk
+        message.from = message.address; // Pengirim adalah address
+        message.to = 'Me'; // Penerima adalah pengguna
+      } else if (message['type'] === '2') {
+        // Pesan keluar
+        message.from = 'Me'; // Pengirim adalah pengguna
+        message.to = message.address; // Penerima adalah address
+      }
+  
       if (Object.keys(message).length > 0) {
         messages.push(message);
       }
@@ -77,6 +88,7 @@ router.post('/messages', (req, res) => {
   
     return messages;
   }
+  
   
 
 module.exports = router;
