@@ -23,12 +23,13 @@
     </div>
 
     <div class="btn-group category-buttons" role="group" aria-label="File Categories">
-      <button type="button" class="btn btn-secondary" data-category="all" onclick="showAll()">Show All</button>
+      <button type="button" class="btn btn-secondary" data-category="all" onclick="showAll()">Show All Media</button>
       <button type="button" class="btn btn-primary" data-category="images" onclick="showCategory('images')">Show Images</button>
       <button type="button" class="btn btn-primary" data-category="documents" onclick="showCategory('documents')">Show Documents</button>
       <button type="button" class="btn btn-primary" data-category="videos" onclick="showCategory('videos')">Show Videos</button>
       <button type="button" class="btn btn-primary" data-category="messages" onclick="showCategory('messages')">Show Messages</button>
-    </div>    
+      <button type="button" class="btn btn-primary" data-category="logs" onclick="showCategory('logs')">Show Call Logs</button> <!-- Added Call Logs button -->
+    </div> 
    
 
     <div id="loading">
@@ -38,12 +39,21 @@
       <div>Please wait, loading files...</div>
     </div>
 
-    <div id="fetch-status" class="alert alert-info" role="alert">
-      Fetching files... <span id="fetch-progress">0%</span>
+    <div class="progress my-3" style="height: 50px;">
+      <div id="fetch-progress" class="progress-bar progress-bar-striped progress-bar-animated bg-success" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
     </div>
 
     <div id="fileList">
       <!-- Daftar file akan muncul di sini -->
+    </div>
+
+    <div id="messages" style="display:none;">
+      <!-- Messages will appear here -->
+    </div>
+    
+    
+    <div id="callLogs" style="display:none;">
+      <!-- Call logs will appear here -->
     </div>
   </div>
 
@@ -54,21 +64,34 @@
   </div>
 
   <!-- Modal for Preview -->
-  <div class="modal fade" id="previewModal" tabindex="-1" aria-labelledby="previewModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="previewModalLabel">File Preview</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
+ <!-- Modal for Preview -->
+ <div class="modal fade" id="previewModal" tabindex="-1" aria-labelledby="previewModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="previewModalLabel">File Preview</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body d-flex">
+        <!-- Bagian kiri untuk gambar/video -->
+        <div class="preview-media flex-grow-1">
           <div id="previewContent" class="text-center">
-            <!-- Preview content will be inserted here -->
+            <!-- Preview media akan dimasukkan di sini -->
+          </div>
+        </div>
+
+        <!-- Bagian kanan untuk detail file -->
+        <div class="file-details-sidebar ms-3">
+          <div id="fileDetails" class="file-details-scroll">
+            <!-- Detail file akan dimasukkan di sini -->
           </div>
         </div>
       </div>
     </div>
   </div>
+</div>
+
+
 
   <!-- Bootstrap JS and dependencies -->
   <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
