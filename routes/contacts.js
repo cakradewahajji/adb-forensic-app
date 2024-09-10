@@ -4,7 +4,7 @@ const router = express.Router();
 
 // Route untuk mendapatkan data kontak
 router.get('/contacts', (req, res) => {
-  exec('adb shell content query --uri content://contacts/phones/ --projection display_name:number', (error, stdout, stderr) => {
+  exec('adb shell content query --uri content://contacts/phones/ --projection display_name:number', (error, stdout, stderr) => { 
     if (error) {
       console.error(`Error fetching contacts: ${error}`);
       return res.status(500).json({ error: 'Failed to fetch contacts' });

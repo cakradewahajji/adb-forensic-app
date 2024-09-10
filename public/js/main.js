@@ -275,6 +275,7 @@ function showCategory(category) {
   const callLogsContainer = document.getElementById('callLogs');
   const messagesContainer = document.getElementById('messages');
   const contactsContainer = document.getElementById('contacts');
+  const appsContainer = document.getElementById('installedApps');
   // const deletedFilesContainer = document.getElementById('deletedFiles');
 
   // Hide all sections initially
@@ -282,9 +283,13 @@ function showCategory(category) {
   callLogsContainer.style.display = 'none';
   messagesContainer.style.display = 'none';
   contactsContainer.style.display = 'none';
+  appsContainer.style.display = 'none';
   // deletedFilesContainer.style.display = 'none';
 
-  if (category === 'logs') {
+  if (category === 'apps') {
+    fetchInstalledApps();
+    appsContainer.style.display = 'block'; // Show installed apps
+  } if (category === 'logs') {
     fetchCallLogs();
     callLogsContainer.style.display = 'block'; // Show call logs
   } else if (category === 'messages') {
@@ -580,6 +585,37 @@ function fetchDeletedFiles() {
   });
 }
 
+// Fungsi untuk mengambil daftar aplikasi dari backend
+function fetchInstalledApps() {
+  return new Promise((resolve, reject) => {
+    fetch('/apps/installed-apps', { method: 'POST' })
+      .then(response => response.json())
+      .then(data => {
+        const appsContainer = document.getElementById('installedApps');
+        appsContainer.innerHTML = ''; // Kosongkan daftar aplikasi sebelumnya
+
+        if (data.apps.length === 0) {
+          appsContainer.innerHTML = '<p>No installed apps found.</p>';
+        } else {
+          data.apps.forEach(app => {
+            const appElement = document.createElement('div');
+            appElement.classList.add('list-group-item');
+            appElement.innerHTML = `
+              <p><strong>Package Name:</strong> ${app.packageName}</p>
+            `;
+            appsContainer.appendChild(appElement);
+          });
+        }
+
+        resolve();
+      })
+      .catch(error => {
+        console.error('Error fetching installed apps:', error);
+        reject();
+      });
+  });
+}
+
 function fetchContacts() {
   fetch('/contacts')
     .then(response => response.json())
@@ -607,6 +643,38 @@ function fetchContacts() {
     .catch(error => console.error('Error fetching contacts:', error));
 }
 
+// Fungsi untuk mengambil daftar aplikasi dari backend
+function fetchInstalledApps() {
+  return new Promise((resolve, reject) => {
+    fetch('/apps/installed-apps', { method: 'POST' })
+      .then(response => response.json())
+      .then(data => {
+        const appsContainer = document.getElementById('installedApps');
+        appsContainer.innerHTML = ''; // Kosongkan daftar aplikasi sebelumnya
+
+        if (data.apps.length === 0) {
+          appsContainer.innerHTML = '<p>No installed apps found.</p>';
+        } else {
+          data.apps.forEach(app => {
+            const appElement = document.createElement('div');
+            appElement.classList.add('list-group-item');
+            appElement.innerHTML = `
+              <p><strong>Package Name:</strong> ${app.packageName}</p>
+            `;
+            appsContainer.appendChild(appElement);
+          });
+        }
+
+        resolve();
+      })
+      .catch(error => {
+        console.error('Error fetching installed apps:', error);
+        reject();
+      });
+  });
+}
+
+
 
 // Fetch files and logs on page load
 window.onload = function () {
@@ -614,6 +682,6 @@ window.onload = function () {
   fetchFiles();
   fetchLogs();
   fetchAllData();
-  fetchDeletedFiles();
+  fetchInstalledApps();
   fetchContacts();
 };
