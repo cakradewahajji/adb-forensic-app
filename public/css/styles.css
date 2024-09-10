@@ -217,6 +217,16 @@ body {
   max-height: 500px;
 }
 
+.filter-container {
+  display: none; /* Sembunyikan filter secara default */
+}
+
+
+.filter-container select,
+.filter-container input {
+  width: 100%;
+}
+
 
 
   

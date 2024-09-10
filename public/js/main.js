@@ -24,10 +24,10 @@ function updateProgress(increment, stepName) {
   // Update lebar progress bar
   progressBar.style.width = `${progressPercentage}%`;
 
-  console.log(`Progress: ${progressPercentage}% - ${stepName}`);
+  // console.log(`Progress: ${progressPercentage}% - ${stepName}`);
 
   if (progressPercentage >= 100) {
-    console.log('All data fetched.');
+    // console.log('All data fetched.');
     progressElement.textContent = 'All data loaded (100%)';
     showLoading(false);
   }
@@ -58,7 +58,7 @@ function fetchProgress() {
       if (data.progress < 100) {
         setTimeout(fetchProgress, 500); // Polling setiap 500ms
       } else {
-        console.log('File fetching completed');
+        // console.log('File fetching completed');
       }
     })
     .catch(error => console.error('Error fetching progress:', error));
@@ -86,10 +86,10 @@ function fetchFiles() {
     fetch('/files')
       .then(response => response.json())
       .then(data => {
-        console.log('Files fetched successfully.');
+        // console.log('Files fetched successfully.');
         allFiles = data;
         showAll(); // Menampilkan semua file
-        updateProgress(1, 'Loading images, documents, and videos'); // Setelah files selesai, update progress
+        updateProgress(1, 'Loading All Data ...'); // Setelah files selesai, update progress
         resolve();
       })
       .catch(error => {
@@ -131,7 +131,7 @@ function fetchCallLogs() {
           callLogsContainer.appendChild(logElement);
         });
 
-        console.log('Call logs fetched.');
+        // console.log('Call logs fetched.');
         updateProgress(1, 'Loading call logs'); // Update progress setelah call logs selesai
         resolve();
       })
@@ -174,19 +174,6 @@ async function fetchDeviceInfo() {
   }
 }
 
-// Fungsi untuk mengubah tipe panggilan menjadi deskripsi
-function getCallType(type) {
-  switch (parseInt(type)) {
-    case 1:
-      return 'Incoming';
-    case 2:
-      return 'Outgoing';
-    case 3:
-      return 'Missed';
-    default:
-      return 'Unknown';
-  }
-}
 
 // Menggabungkan semua fungsi fetching dengan progress bar
 function fetchAllData() {
@@ -195,7 +182,7 @@ function fetchAllData() {
 
   Promise.all([fetchFiles(), fetchMessages(), fetchCallLogs()])
     .then(() => {
-      console.log('All data fetched successfully.');
+      // console.log('All data fetched successfully.');
       updateProgress(0, 'All data loaded');
     })
     .catch(error => {
@@ -250,50 +237,52 @@ async function fetchLogs() {
       throw new Error('Failed to fetch logs');
     }
     const data = await response.json();  // Pastikan responnya JSON
-    console.log('Logs:', data);
+    // console.log('Logs:', data);
   } catch (error) {
     console.error('Error fetching logs:', error);
   }
 }
 
-function showContacts() {
-  fetch('/contacts')
-    .then(response => response.json())
-    .then(data => {
-      const contactsContainer = document.getElementById('contacts');
-      contactsContainer.innerHTML = ''; // Clear previous contacts
+// function showContacts() {
+//   fetch('/contacts')
+//     .then(response => response.json())
+//     .then(data => {
+//       const contactsContainer = document.getElementById('contacts');
+//       contactsContainer.innerHTML = ''; // Clear previous contacts
 
-      if (data.contacts.length === 0) {
-        contactsContainer.innerHTML = '<p>No contacts found.</p>';
-      } else {
-        data.contacts.forEach(contact => {
-          const contactElement = document.createElement('div');
-          contactElement.classList.add('list-group-item');
-          contactElement.innerHTML = `
-            <p><strong>Name:</strong> ${contact.name}</p>
-            <p><strong>Phone:</strong> ${contact.phone}</p>
-          `;
-          contactsContainer.appendChild(contactElement);
-        });
-      }
+//       if (data.contacts.length === 0) {
+//         contactsContainer.innerHTML = '<p>No contacts found.</p>';
+//       } else {
+//         data.contacts.forEach(contact => {
+//           const contactElement = document.createElement('div');
+//           contactElement.classList.add('list-group-item');
+//           contactElement.innerHTML = `
+//             <p><strong>Name:</strong> ${contact.name}</p>
+//             <p><strong>Phone:</strong> ${contact.phone}</p>
+//           `;
+//           contactsContainer.appendChild(contactElement);
+//         });
+//       }
 
-      // Tampilkan container contacts
-      contactsContainer.style.display = 'block';
-    })
-    .catch(error => console.error('Error fetching contacts:', error));
-}
+//       // Tampilkan container contacts
+//       contactsContainer.style.display = 'block';
+//     })
+//     .catch(error => console.error('Error fetching contacts:', error));
+// }
 
 function showCategory(category) {
   const fileList = document.getElementById('fileList');
   const callLogsContainer = document.getElementById('callLogs');
   const messagesContainer = document.getElementById('messages');
-  const contactsContainer = document.getElementById('contacts'); // Tambahkan contacts container
+  const contactsContainer = document.getElementById('contacts');
+  // const deletedFilesContainer = document.getElementById('deletedFiles');
 
   // Hide all sections initially
   fileList.style.display = 'none';
   callLogsContainer.style.display = 'none';
   messagesContainer.style.display = 'none';
-  contactsContainer.style.display = 'none'; // Hide contacts by default
+  contactsContainer.style.display = 'none';
+  // deletedFilesContainer.style.display = 'none';
 
   if (category === 'logs') {
     fetchCallLogs();
@@ -302,11 +291,10 @@ function showCategory(category) {
     fetchMessages();
     messagesContainer.style.display = 'block'; // Show messages
   } else if (category === 'contacts') {
-    showContacts(); // Panggil fungsi showContacts untuk menampilkan kontak
+    fetchContacts();
     contactsContainer.style.display = 'block'; // Show contacts
   } else {
     fileList.style.display = 'block'; // Show file list if other category is selected
-    
     const files = allFiles[category] || [];
     fileList.innerHTML = ''; // Clear the file list content
 
@@ -333,6 +321,7 @@ function showCategory(category) {
     });
   }
 }
+
 
 function fetchMessages() {
   return new Promise((resolve, reject) => {
@@ -405,18 +394,38 @@ async function fetchCallLogs() {
 }
 
 
-// Fungsi untuk mengubah tipe panggilan menjadi deskripsi
-function getCallType(type) {
-  switch (parseInt(type)) {
-    case 1:
-      return 'Panggilan Masuk';
-    case 2:
-      return 'Panggilan Keluar';
-    case 3:
-      return 'Panggilan Tidak Terjawab';
-    default:
-      return 'Tipe tidak diketahui';
-  }
+function applyCallFilter() {
+  const filterType = document.getElementById('callFilter').value;
+  const searchTerm = document.getElementById('searchCallLogs').value;
+
+  fetch('/logs/fetch', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ filterType, searchTerm })
+  })
+    .then(response => response.json())
+    .then(data => {
+      const logs = data.logs;
+      const callLogsContainer = document.getElementById('callLogs');
+      callLogsContainer.innerHTML = ''; // Bersihkan tampilan sebelumnya
+
+      logs.forEach(log => {
+        const logElement = document.createElement('div');
+        logElement.classList.add('list-group-item');
+        logElement.innerHTML = `
+          <p><strong>Number:</strong> ${log.number || 'N/A'}</p>
+          <p><strong>Duration:</strong> ${log.duration || 'N/A'} seconds</p>
+          <p><strong>Date:</strong> ${new Date(parseInt(log.date)).toLocaleString()}</p>
+          <p><strong>Type:</strong> ${getCallType(log.type)}</p>
+        `;
+        callLogsContainer.appendChild(logElement);
+      });
+    })
+    .catch(error => {
+      console.error('Error fetching call logs:', error);
+    });
 }
 
 
@@ -448,7 +457,7 @@ function showAll() {
           <i class="${getFileIcon(file.path)} file-icon"></i>
           <div class="file-details">
             <div class="file-path">${file.path.replace(/^\/sdcard\//, '')}</div>
-            <div class="file-info">Last Modified: ${file.dateModified}</div>
+            <div class="file-info">Last Modified: ${file.dateModified || 'N/A'}</div>
           </div>
           ${getPreviewButton(file.path)}
         `;
@@ -478,61 +487,133 @@ function previewFile(filePath) {
   previewContent.innerHTML = ''; // Kosongkan konten sebelumnya
   fileDetails.innerHTML = ''; // Kosongkan detail sebelumnya
 
-  const encodedPath = encodeURIComponent(filePath);
-
-  // Ambil file detail dari backend berdasarkan path
-  fetch(`/files/file-info?path=${encodedPath}`)
-    .then(response => response.json())
-    .then(data => {
-      let detailsHTML = `
-        <p><strong>File Path:</strong> ${data.path}</p>
-        <p><strong>Date Added:</strong> ${data.dateAdded || 'N/A'}</p>
-        <p><strong>Date Modified:</strong> ${data.dateModified || 'N/A'}</p>
-      `;
-
-      // Jika geolocation ada, tambahkan link ke Google Maps
-      if (data.geolocation && data.geolocation.latitude !== 'N/A' && data.geolocation.longitude !== 'N/A') {
-        const googleMapsLink = `https://www.google.com/maps?q=${data.geolocation.latitude},${data.geolocation.longitude}`;
-        detailsHTML += `
-          <p><strong>Geolocation:</strong> 
-            <a href="${googleMapsLink}" target="_blank">View on Google Maps</a>
-          </p>
-        `;
+  // Ambil data file dari allFiles yang sudah ada di showAll()
+  let fileData;
+  Object.keys(allFiles).forEach(category => {
+    const files = allFiles[category];
+    files.forEach(file => {
+      if (file.path === filePath) {
+        fileData = file;
       }
-
-      fileDetails.innerHTML = detailsHTML;
-
-      // Tambahkan konten ke modal berdasarkan tipe file
-      if (filePath.match(/\.(jpg|jpeg|png|gif)$/i)) {
-        previewContent.innerHTML = `
-          <img src="/files/file?path=${encodedPath}" class="file-preview" alt="Image Preview">
-        `;
-      } else if (filePath.match(/\.(mp4|mkv|avi)$/i)) {
-        previewContent.innerHTML = `
-          <video controls class="file-preview">
-            <source src="/files/file?path=${encodedPath}" type="video/mp4">
-            Your browser does not support the video tag.
-          </video>
-        `;
-      } else {
-        previewContent.innerHTML = `
-          <p>No preview available for this file type.</p>
-        `;
-      }
-
-      // Tampilkan modal
-      $('#previewModal').modal('show');
-    })
-    .catch(error => {
-      console.error('Error fetching file details:', error);
     });
+  });
+
+  if (!fileData) {
+    console.error('File data not found');
+    return;
+  }
+
+  // Buat tampilan detail file dengan dateModified dari allFiles
+  let detailsHTML = `
+    <p><strong>File Path:</strong> ${fileData.path}</p>
+    <p><strong>Date Added:</strong> ${fileData.dateAdded || 'N/A'}</p>
+    <p><strong>Date Modified:</strong> ${fileData.dateModified || 'N/A'}</p>
+  `;
+
+  // Jika geolocation ada, tambahkan link ke Google Maps
+  if (fileData.geolocation && fileData.geolocation.latitude !== 'N/A' && fileData.geolocation.longitude !== 'N/A') {
+    const googleMapsLink = `https://www.google.com/maps?q=${fileData.geolocation.latitude},${fileData.geolocation.longitude}`;
+    detailsHTML += `
+      <p><strong>Geolocation:</strong> 
+        <a href="${googleMapsLink}" target="_blank">View on Google Maps</a>
+      </p>
+    `;
+  }
+
+  fileDetails.innerHTML = detailsHTML;
+
+  // Tambahkan konten ke modal berdasarkan tipe file
+  if (filePath.match(/\.(jpg|jpeg|png|gif)$/i)) {
+    previewContent.innerHTML = `
+      <img src="/files/file?path=${encodeURIComponent(filePath)}" class="file-preview" alt="Image Preview">
+    `;
+  } else if (filePath.match(/\.(mp4|mkv|avi)$/i)) {
+    previewContent.innerHTML = `
+      <video controls class="file-preview">
+        <source src="/files/file?path=${encodeURIComponent(filePath)}" type="video/mp4">
+        Your browser does not support the video tag.
+      </video>
+    `;
+  } else {
+    previewContent.innerHTML = `
+      <p>No preview available for this file type.</p>
+    `;
+  }
+
+  // Tampilkan modal
+  $('#previewModal').modal('show');
 }
 
+function fetchDeletedFiles() {
+  return new Promise((resolve, reject) => {
+    fetch('/files')
+      .then(response => response.json())
+      .then(data => {
+        const deletedFilesContainer = document.getElementById('deletedFiles');
+        deletedFilesContainer.innerHTML = ''; // Clear previous content
+
+        const deletedFiles = data.deletedFiles || [];
+
+        if (deletedFiles.length === 0) {
+          deletedFilesContainer.innerHTML = '<p>No deleted files found.</p>';
+        } else {
+          deletedFiles.forEach(file => {
+            const fileElement = document.createElement('div');
+            fileElement.classList.add('file-list-item');
+            fileElement.innerHTML = `
+              <i class="${getFileIcon(file.path)} file-icon"></i>
+              <div class="file-details">
+                <div class="file-path">${file.path.replace(/^\/sdcard\//, '')}</div>
+                <div class="file-info">Last Modified: ${file.timestamp || 'Unknown'}</div>
+              </div>
+              ${getPreviewButton(file.path)}
+            `;
+            deletedFilesContainer.appendChild(fileElement);
+          });
+        }
+        resolve();
+      })
+      .catch(error => {
+        console.error('Error fetching deleted files:', error);
+        reject();
+      });
+  });
+}
+
+function fetchContacts() {
+  fetch('/contacts')
+    .then(response => response.json())
+    .then(data => {
+      const contactsContainer = document.getElementById('contacts');
+      contactsContainer.innerHTML = ''; // Clear previous contacts
+
+      if (data.contacts.length === 0) {
+        contactsContainer.innerHTML = '<p>No contacts found.</p>';
+      } else {
+        data.contacts.forEach(contact => {
+          const contactElement = document.createElement('div');
+          contactElement.classList.add('list-group-item');
+          contactElement.innerHTML = `
+            <p><strong>Name:</strong> ${contact.name}</p>
+            <p><strong>Phone:</strong> ${contact.phone}</p>
+          `;
+          contactsContainer.appendChild(contactElement);
+        });
+      }
+
+      // Show the contacts container
+      contactsContainer.style.display = 'block';
+    })
+    .catch(error => console.error('Error fetching contacts:', error));
+}
 
 
 // Fetch files and logs on page load
 window.onload = function () {
   fetchDeviceInfo();
   fetchFiles();
-  fetchLogs();  // Panggil log fetching saat halaman dimuat
+  fetchLogs();
+  fetchAllData();
+  fetchDeletedFiles();
+  fetchContacts();
 };

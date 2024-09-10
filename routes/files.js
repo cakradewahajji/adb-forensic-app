@@ -53,9 +53,9 @@ async function initializeRouter() {
             // Tarik file dari perangkat Android ke server
             exec(`adb pull "${filePath}" "${localPath}"`, (pullError, stdout, stderr) => {
               if (pullError || stderr) {
-                console.error(`Error pulling file: ${pullError || stderr}`);
+                // console.error(`Error pulling file: ${pullError || stderr}`);
               } else {
-                console.log(`File pulled successfully: ${stdout}`);
+                // console.log(`File pulled successfully: ${stdout}`);
                 // Baca file lokal dan parse EXIF data
                 const fileBuffer = fs.readFileSync(localPath);
                 const parser = exifParser.create(fileBuffer);
@@ -84,12 +84,12 @@ async function initializeRouter() {
             }
 
             // Tarik file video ke server
-            console.log(`Pulling video file: ${filePath} to ${localPath}`);
+            // console.log(`Pulling video file: ${filePath} to ${localPath}`);
             exec(`adb pull "${filePath}" "${localPath}"`, (pullError, stdout, stderr) => {
               if (pullError || stderr) {
-                console.error(`Error pulling video file: ${pullError || stderr}`);
+                // console.error(`Error pulling video file: ${pullError || stderr}`);
               } else {
-                console.log(`Video file pulled successfully: ${stdout}`);
+                // console.log(`Video file pulled successfully: ${stdout}`);
               }
 
               // Jangan tambahkan geolocation untuk video
@@ -165,7 +165,7 @@ async function initializeRouter() {
 
   // Endpoint utama untuk mendapatkan daftar file dari perangkat Android
   router.get('/', (req, res) => {
-    console.log('Fetching filtered file list...');
+    // console.log('Fetching filtered file list...');
     const cmd = `adb shell "find /sdcard/ -type f | grep -E '\\.(jpg|jpeg|png|mp4|mkv|avi)$'"`;
 
     exec(cmd, (error, stdout, stderr) => {
@@ -191,7 +191,7 @@ async function initializeRouter() {
 
       Promise.all(fileDetailsPromises)
         .then(() => {
-          console.log('All files processed. Sending response...');
+          // console.log('All files processed. Sending response...');
           res.json(categorizedFiles); // Kirim semua file ke front-end
         })
         .catch(err => {
@@ -204,7 +204,7 @@ async function initializeRouter() {
   // Endpoint untuk menyajikan file dari perangkat Android
   router.get('/file', (req, res) => {
     const filePath = req.query.path;
-    console.log(`Requested file path: ${filePath}`); // Logging path
+    // console.log(`Requested file path: ${filePath}`); // Logging path
   
     const localTempDir = path.join(__dirname, '..', 'temp');
     const localPath = path.join(localTempDir, path.basename(filePath));
@@ -238,16 +238,21 @@ async function initializeRouter() {
   
     // Mendapatkan informasi tentang file, termasuk dateAdded dan dateModified
     const stats = fs.statSync(localPath);
-    const dateAdded = new Date(stats.birthtime).toLocaleString(); // waktu pembuatan file
-    const dateModified = new Date(stats.mtime).toLocaleString(); // waktu modifikasi terakhir
+    let dateAdded = new Date(stats.birthtime).toLocaleString(); // waktu pembuatan file
+    let dateModified = new Date(stats.mtime).toLocaleString(); // waktu modifikasi terakhir
   
-    // Periksa apakah file adalah gambar
+    // Jika file adalah gambar, coba ambil tanggal dari EXIF
     if (filePath.match(/\.(jpg|jpeg|png|gif)$/i)) {
-      // Baca file dari server dan kembalikan detail metadata hanya untuk gambar
       try {
         const fileBuffer = fs.readFileSync(localPath);
         const parser = exifParser.create(fileBuffer);
         const exifData = parser.parse();
+  
+        // Jika metadata EXIF memiliki tanggal, gunakan itu
+        if (exifData.tags && exifData.tags.DateTimeOriginal) {
+          dateAdded = new Date(exifData.tags.DateTimeOriginal * 1000).toLocaleString();
+          dateModified = dateAdded; // Tanggal EXIF biasanya digunakan untuk keduanya
+        }
   
         // Buat respons dengan detail file termasuk geolocation jika file adalah gambar
         const fileDetails = {
@@ -265,19 +270,66 @@ async function initializeRouter() {
         console.error('Error reading file or extracting metadata:', err);
         res.status(500).json({ error: 'Failed to retrieve file details' });
       }
+    } else if (filePath.match(/\.(mp4|mkv|avi)$/i)) {
+      // Tangani file video - gunakan metadata sistem file
+      const fileDetails = {
+        path: filePath,
+        dateAdded,    // Menggunakan dateAdded dari sistem file
+        dateModified, // Menggunakan dateModified dari sistem file
+        geolocation: null  // Tidak ada geolocation untuk file video
+      };
+  
+      res.json(fileDetails);
     } else {
-      // Jika file bukan gambar, tidak mencoba parsing EXIF
+      // Jika file bukan gambar atau video, tidak mencoba parsing EXIF
       const fileDetails = {
         path: filePath,
         dateAdded,    // Tampilkan dateAdded yang sebenarnya
         dateModified, // Tampilkan dateModified yang sebenarnya
-        geolocation: null  // Tidak ada geolocation untuk file non-gambar
+        geolocation: null  // Tidak ada geolocation untuk file non-gambar/non-video
       };
   
       res.json(fileDetails);
     }
   });
-  
+
+  // Endpoint untuk melihat file yang dihapus (dalam folder Trash)
+// Endpoint untuk mengambil daftar file termasuk yang dihapus
+router.get('/files', (req, res) => {
+  exec('adb shell find /sdcard/ -type f', (error, stdout, stderr) => {
+    if (error || stderr) {
+      console.error('Error fetching files:', error || stderr);
+      return res.status(500).json({ success: false, message: 'Failed to fetch files' });
+    }
+
+    const allFiles = stdout.split('\n').filter(file => file.trim());
+    const categorizedFiles = {
+      images: [],
+      documents: [],
+      videos: [],
+      deletedFiles: [], // Pastikan kategori deletedFiles diinisialisasi
+      others: []
+    };
+
+    allFiles.forEach(file => {
+      if (file.match(/\.(jpg|jpeg|png|gif)$/i)) {
+        if (file.includes('.trashed-')) {
+          categorizedFiles.deletedFiles.push({ path: file, timestamp: new Date().toLocaleString() });
+        } else {
+          categorizedFiles.images.push({ path: file, timestamp: new Date().toLocaleString() });
+        }
+      } else if (file.match(/\.(mp4|mkv|avi)$/i)) {
+        categorizedFiles.videos.push({ path: file, timestamp: new Date().toLocaleString() });
+      } else if (file.includes('.trashed-')) {
+        categorizedFiles.deletedFiles.push({ path: file, timestamp: new Date().toLocaleString() });
+      } else {
+        categorizedFiles.others.push({ path: file, timestamp: new Date().toLocaleString() });
+      }
+    });
+
+    res.json(categorizedFiles);
+  });
+});
 
   return router;
 }
