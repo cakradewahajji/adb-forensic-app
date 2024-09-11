@@ -23,8 +23,7 @@ function parseCallLogs(stdout) {
 
   rows.forEach(row => {
     const log = {};
-    const fields = row.split(',');
-
+    const fields = row.split(',');  // Masih bisa pakai koma untuk call logs jika aman
     fields.forEach(field => {
       const [key, value] = field.split('=');
       if (key && value) {
@@ -42,53 +41,60 @@ function parseCallLogs(stdout) {
 
 // Fungsi untuk mengambil data pesan SMS
 router.post('/messages', (req, res) => {
-    exec('adb shell content query --uri content://sms', (error, stdout, stderr) => {
-      if (error || stderr) {
-        console.error('Error fetching messages:', error || stderr);
-        return res.status(500).json({ success: false, message: 'Failed to fetch messages' });
-      }
-  
-      // Parsing hasil pesan dari stdout
-      const messages = parseMessages(stdout);
-      res.json({ success: true, messages });
-    });
+  exec('adb shell content query --uri content://sms', (error, stdout, stderr) => {
+    if (error || stderr) {
+      console.error('Error fetching messages:', error || stderr);
+      return res.status(500).json({ success: false, message: 'Failed to fetch messages' });
+    }
+
+    // Parsing hasil pesan dari stdout
+    const messages = parseMessages(stdout);
+    res.json({ success: true, messages });
   });
-  
-  // Fungsi untuk parsing pesan SMS dan membedakan *from* dan *to*
-  function parseMessages(stdout) {
-    const messages = [];
-    const rows = stdout.split('\n').filter(row => row.trim()); // Pisahkan baris berdasarkan newline
-  
-    rows.forEach(row => {
-      const message = {};
-      const fields = row.split(',');
-  
-      fields.forEach(field => {
-        const [key, value] = field.split('=');
-        if (key && value) {
-          message[key.trim()] = value.trim();
-        }
-      });
-  
-      // Tentukan apakah pesan adalah *from* (pesan masuk) atau *to* (pesan keluar)
-      if (message['type'] === '1') {
-        // Pesan masuk
-        message.from = message.address; // Pengirim adalah address
-        message.to = 'Me'; // Penerima adalah pengguna
-      } else if (message['type'] === '2') {
-        // Pesan keluar
-        message.from = 'Me'; // Pengirim adalah pengguna
-        message.to = message.address; // Penerima adalah address
-      }
-  
-      if (Object.keys(message).length > 0) {
-        messages.push(message);
-      }
-    });
-  
-    return messages;
-  }
-  
-  
+});
+
+// Fungsi untuk parsing pesan SMS dan membedakan *from* dan *to*
+// Fungsi untuk parsing pesan SMS dan membedakan *from* dan *to*
+// Fungsi untuk parsing pesan SMS dan membedakan *from* dan *to*
+function parseMessages(stdout) {
+  const messages = [];
+  const rows = stdout.split('\n').filter(row => row.trim()); // Pisahkan baris berdasarkan newline
+
+  rows.forEach(row => {
+    const message = {};
+
+    // Gunakan regex untuk memisahkan kunci tertentu seperti 'address', 'date', 'body', dll.
+    const addressMatch = row.match(/address=([^\s,]+)/);
+    const dateMatch = row.match(/date=([^\s,]+)/);
+    const bodyMatch = row.match(/body=(.*?)(?=, service_center=|locked=|error_code=|creator=|seen=|$)/); // Tangkap seluruh body sampai ke field berikutnya
+
+    if (addressMatch) {
+      message.address = addressMatch[1];
+    }
+    if (dateMatch) {
+      message.date = dateMatch[1];
+    }
+    if (bodyMatch) {
+      message.body = bodyMatch[1].trim();  // Ambil hanya body pesan tanpa field tambahan
+    }
+
+    // Tentukan apakah pesan adalah *from* (pesan masuk) atau *to* (pesan keluar)
+    if (row.includes('type=1')) {
+      // Pesan masuk
+      message.from = message.address; // Pengirim adalah address
+      message.to = 'Me'; // Penerima adalah pengguna
+    } else if (row.includes('type=2')) {
+      // Pesan keluar
+      message.from = 'Me'; // Pengirim adalah pengguna
+      message.to = message.address; // Penerima adalah address
+    }
+
+    if (Object.keys(message).length > 0 && message.body) {
+      messages.push(message); // Hanya masukkan pesan jika ada body
+    }
+  });
+
+  return messages;
+}
 
 module.exports = router;

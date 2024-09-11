@@ -204,6 +204,7 @@ function fetchMessages() {
       .then(response => response.json())
       .then(data => {
         const messages = data.messages;
+        console.log('Messages:', messages);
         const messagesContainer = document.getElementById('messages');
         messagesContainer.innerHTML = ''; // Clear previous messages
 
@@ -237,7 +238,7 @@ async function fetchLogs() {
       throw new Error('Failed to fetch logs');
     }
     const data = await response.json();  // Pastikan responnya JSON
-    // console.log('Logs:', data);
+    console.log('Logs:', data);
   } catch (error) {
     console.error('Error fetching logs:', error);
   }
@@ -385,7 +386,7 @@ async function fetchCallLogs() {
       logElement.classList.add('list-group-item');
       logElement.innerHTML = `
         <p><strong>Name:</strong> ${log.name || 'Contact is not saved'}</p>
-        <p><strong>Number:</strong> ${log.normalized_number || 'N/A'}</p>
+        <p><strong>Number:</strong> ${log.number || 'N/A'}</p>
         <p><strong>Duration:</strong> ${log.duration || 'N/A'} seconds</p>
         <p><strong>Date:</strong> ${new Date(parseInt(log.date)).toLocaleString()}</p>
         <p><strong>Location:</strong> ${log.geocoded_location || 'N/A'}</p>
@@ -479,6 +480,7 @@ function showAll() {
   }
 }
 
+
 // Fungsi untuk mendapatkan tombol preview berdasarkan jenis file
 function getPreviewButton(filePath) {
   if (filePath.match(/\.(jpg|jpeg|png|gif|mp4|mkv|avi|pdf|docx|txt)$/i)) {
@@ -492,61 +494,74 @@ function previewFile(filePath) {
   previewContent.innerHTML = ''; // Kosongkan konten sebelumnya
   fileDetails.innerHTML = ''; // Kosongkan detail sebelumnya
 
-  // Ambil data file dari allFiles yang sudah ada di showAll()
-  let fileData;
-  Object.keys(allFiles).forEach(category => {
-    const files = allFiles[category];
-    files.forEach(file => {
-      if (file.path === filePath) {
-        fileData = file;
+  // Tampilkan loading indicator
+  fileDetails.innerHTML = '<p>Loading file details...</p>';
+
+  // Buat permintaan baru untuk informasi file
+  fetch(`/files/file-info?path=${encodeURIComponent(filePath)}`)
+    .then(response => response.json())
+    .then(fileData => {
+      if (!fileData) {
+        console.error('File data not found');
+        fileDetails.innerHTML = '<p>Error: File details not available</p>';
+        return;
       }
+
+      // Buat tampilan detail file
+      let detailsHTML = `
+        <p><strong>File Path:</strong> ${fileData.path}</p>
+        <p><strong>Date Added:</strong> ${fileData.dateAdded || 'N/A'}</p>
+        <p><strong>Date Modified:</strong> ${fileData.dateModified || 'N/A'}</p>
+      `;
+
+      // Jika geolocation ada, tambahkan link ke Google Maps dan iframe map
+      if (fileData.geolocation && fileData.geolocation.latitude !== 'N/A' && fileData.geolocation.longitude !== 'N/A') {
+        const googleMapsLink = `https://www.google.com/maps?q=${fileData.geolocation.latitude},${fileData.geolocation.longitude}`;
+        detailsHTML += `
+          <p><strong>Geolocation:</strong> 
+            <a href="${googleMapsLink}" target="_blank">View on Google Maps</a>
+          </p>
+          <iframe
+            width="100%"
+            height="300"
+            frameborder="0" 
+            style="border:0"
+            src="https://www.google.com/maps/embed/v1/view?key=YOUR_GOOGLE_MAPS_API_KEY&center=${fileData.geolocation.latitude},${fileData.geolocation.longitude}&zoom=15" allowfullscreen>
+          </iframe>
+        `;
+      } else {
+        detailsHTML += `
+          <p><strong>Geolocation:</strong> N/A</p>
+        `;
+      }
+
+      fileDetails.innerHTML = detailsHTML;
+
+      // Tambahkan konten ke modal berdasarkan tipe file
+      if (filePath.match(/\.(jpg|jpeg|png|gif)$/i)) {
+        previewContent.innerHTML = `
+          <img src="/files/file?path=${encodeURIComponent(filePath)}" class="file-preview" alt="Image Preview">
+        `;
+      } else if (filePath.match(/\.(mp4|mkv|avi)$/i)) {
+        previewContent.innerHTML = `
+          <video controls class="file-preview">
+            <source src="/files/file?path=${encodeURIComponent(filePath)}" type="video/mp4">
+            Your browser does not support the video tag.
+          </video>
+        `;
+      } else {
+        previewContent.innerHTML = `
+          <p>No preview available for this file type.</p>
+        `;
+      }
+
+      // Tampilkan modal
+      $('#previewModal').modal('show');
+    })
+    .catch(error => {
+      console.error('Error fetching file details:', error);
+      fileDetails.innerHTML = '<p>Error: Failed to fetch file details</p>';
     });
-  });
-
-  if (!fileData) {
-    console.error('File data not found');
-    return;
-  }
-
-  // Buat tampilan detail file dengan dateModified dari allFiles
-  let detailsHTML = `
-    <p><strong>File Path:</strong> ${fileData.path}</p>
-    <p><strong>Date Added:</strong> ${fileData.dateAdded || 'N/A'}</p>
-    <p><strong>Date Modified:</strong> ${fileData.dateModified || 'N/A'}</p>
-  `;
-
-  // Jika geolocation ada, tambahkan link ke Google Maps
-  if (fileData.geolocation && fileData.geolocation.latitude !== 'N/A' && fileData.geolocation.longitude !== 'N/A') {
-    const googleMapsLink = `https://www.google.com/maps?q=${fileData.geolocation.latitude},${fileData.geolocation.longitude}`;
-    detailsHTML += `
-      <p><strong>Geolocation:</strong> 
-        <a href="${googleMapsLink}" target="_blank">View on Google Maps</a>
-      </p>
-    `;
-  }
-
-  fileDetails.innerHTML = detailsHTML;
-
-  // Tambahkan konten ke modal berdasarkan tipe file
-  if (filePath.match(/\.(jpg|jpeg|png|gif)$/i)) {
-    previewContent.innerHTML = `
-      <img src="/files/file?path=${encodeURIComponent(filePath)}" class="file-preview" alt="Image Preview">
-    `;
-  } else if (filePath.match(/\.(mp4|mkv|avi)$/i)) {
-    previewContent.innerHTML = `
-      <video controls class="file-preview">
-        <source src="/files/file?path=${encodeURIComponent(filePath)}" type="video/mp4">
-        Your browser does not support the video tag.
-      </video>
-    `;
-  } else {
-    previewContent.innerHTML = `
-      <p>No preview available for this file type.</p>
-    `;
-  }
-
-  // Tampilkan modal
-  $('#previewModal').modal('show');
 }
 
 function fetchDeletedFiles() {

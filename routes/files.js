@@ -248,6 +248,9 @@ async function initializeRouter() {
         const parser = exifParser.create(fileBuffer);
         const exifData = parser.parse();
   
+        // Log EXIF Data
+        console.log('EXIF Data:', exifData);
+  
         // Jika metadata EXIF memiliki tanggal, gunakan itu
         if (exifData.tags && exifData.tags.DateTimeOriginal) {
           dateAdded = new Date(exifData.tags.DateTimeOriginal * 1000).toLocaleString();
@@ -264,6 +267,9 @@ async function initializeRouter() {
             longitude: exifData.tags.GPSLongitude || 'N/A'
           }
         };
+  
+        // Log Geolocation Data
+        console.log('Geolocation Data:', fileDetails.geolocation);
   
         res.json(fileDetails);
       } catch (err) {
@@ -292,8 +298,7 @@ async function initializeRouter() {
       res.json(fileDetails);
     }
   });
-
-  // Endpoint untuk melihat file yang dihapus (dalam folder Trash)
+  
 // Endpoint untuk mengambil daftar file termasuk yang dihapus
 router.get('/files', (req, res) => {
   exec('adb shell find /sdcard/ -type f', (error, stdout, stderr) => {
